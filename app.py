@@ -4,12 +4,11 @@ from googleapiclient.discovery import build
 
 # Google Sheets setup
 SERVICE_ACCOUNT_FILE = 'key.json'  # Path to your service account key file
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']  # Define read-only scope
-
-# Authenticate with the service account
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-sheet_service = build('sheets', 'v4', credentials=credentials)
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+service = build("sheets", "v4", credentials=credentials)
 
 # Google Sheet details
 SPREADSHEET_ID = '1ziAE7ipLx_NFXZP-2MvjQtPmHBpUj-RT-GfIPOqwqOA'  # Replace with your actual sheet ID
@@ -17,7 +16,7 @@ RANGE_NAME = 'Sheet1!A:F'  # Adjusted range to include all relevant columns (A t
 
 # Streamlit app title
 st.title("Student Result Checker")
-st.subheader("by Unacademy offline center Dugri")
+st.subheader("by Unacademy Offline Center Dugri")
 st.write("---")
 
 # Input for roll number
@@ -27,7 +26,7 @@ if st.button("Get Result"):
     if roll_no:
         try:
             # Fetch data from Google Sheets
-            result = sheet_service.spreadsheets().values().get(
+            result = service.spreadsheets().values().get(
                 spreadsheetId=SPREADSHEET_ID,
                 range=RANGE_NAME
             ).execute()
@@ -47,22 +46,23 @@ if st.button("Get Result"):
                     phy_index = headers.index("PHY")  # Physics column
                     chem_index = headers.index("CHEM")  # Chemistry column
                     total_index = headers.index("Total")  # Total column
-                except ValueError as e:
-                    st.error("Header mismatch! Please ensure the sheet headers match: Roll no., CANDIDATE NAME, PHY, CHEM, Total.")
+                except ValueError:
+                    st.error("Header mismatch! Ensure the sheet headers include: Roll no., CANDIDATE NAME, PHY, CHEM, Total.")
                     st.stop()
 
                 # Search for the roll number
                 found = False
                 for row in data:
-                    # Ensure row length matches header length
-                    if len(row) >= total_index + 1 and row[roll_no_index] == roll_no:
-                        st.success(f"Result for Roll Number {roll_no}:")
-                        st.write(f"**Name:** {row[name_index]}")
-                        st.write(f"**Physics Marks:** {row[phy_index]}")
-                        st.write(f"**Chemistry Marks:** {row[chem_index]}")
-                        st.write(f"**Total Marks:** {row[total_index]}")
-                        found = True
-                        break
+                    # Safely handle rows with missing data
+                    if len(row) > max(roll_no_index, name_index, phy_index, chem_index, total_index):
+                        if row[roll_no_index] == roll_no:
+                            st.success(f"Result for Roll Number {roll_no}:")
+                            st.write(f"**Name:** {row[name_index]}")
+                            st.write(f"**Physics Marks:** {row[phy_index]}")
+                            st.write(f"**Chemistry Marks:** {row[chem_index]}")
+                            st.write(f"**Total Marks:** {row[total_index]}")
+                            found = True
+                            break
 
                 if not found:
                     st.error("Roll Number not found. Please check and try again.")
